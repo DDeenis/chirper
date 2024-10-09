@@ -44,7 +44,8 @@ class ChirpController extends Controller
 
             if(!is_dir($imagesFolder)) mkdir(directory: $imagesFolder, recursive: true);
 
-            $imageUploadData = array_map(function (UploadedFile $file) use ($imagesFolder)  {
+            $imageUploadData = collect($images)
+                ->map(function (UploadedFile $file) use ($imagesFolder)  {
                     $name = time().'_'.$file->hashName();
                     $path = $imagesFolder.'/'.$name;
                     $fileHash = hash_file(
@@ -75,32 +76,25 @@ class ChirpController extends Controller
                         ],
                         'save' => fn () => $encodedImage->save($path),
                     ];
-            }, $images);
+                }
+            );
 
             $existingFiles = Media::whereIn(
                 'file_hash', 
-                array_map(
+                $imageUploadData->map(
                     fn ($file) => $file['file']['file_hash'],
-                    $imageUploadData
                 )
             )->select(['id', 'file_hash'])->get();
 
             $existingFilesHashes = $existingFiles->pluck('file_hash')->toArray();
             $existingFilesIds = $existingFiles->pluck('id')->toArray();
 
-            $filesToAttach = array_filter(
-                $imageUploadData, 
+            $filesToAttach = $imageUploadData->filter(
                 fn ($file) => in_array($file['file']['file_hash'], $existingFilesHashes)
             );
-            $filesToCreate = array_filter(
-                $imageUploadData, 
+            $filesToCreate = $imageUploadData->filter(
                 fn ($file) => !in_array($file['file']['file_hash'], $existingFilesHashes)
             );
-
-            // dd($existingFiles, array_map(
-            //     fn ($file) => $file['file_hash'],
-            //     $imageUploadData
-            // ), Media::all());
 
             if(count($filesToCreate) > 0) {
                 foreach($filesToCreate as $file) {
@@ -111,10 +105,7 @@ class ChirpController extends Controller
                 $created_chirp
                     ->media()
                     ->createMany(
-                        array_map(
-                            fn (array $file) => $file['file'],
-                            $filesToCreate
-                        )
+                        $filesToCreate->map(fn (array $file) => $file['file'])
                     );
             }
             

@@ -141,6 +141,7 @@ export function CreateChirpForm({
                                 const { files } = e.target;
                                 if (files) {
                                     const currentFiles = data.images ?? [];
+
                                     if (currentFiles.length === maxImagesCount)
                                         return;
 
@@ -148,15 +149,12 @@ export function CreateChirpForm({
                                         (file) =>
                                             !fileKeys.includes(getFileKey(file))
                                     );
+
                                     setData("images", [
                                         ...currentFiles,
                                         ...filesFiltered.slice(
                                             0,
-                                            Math.max(
-                                                maxImagesCount -
-                                                    currentFiles.length -
-                                                    filesFiltered.length
-                                            )
+                                            maxImagesCount - currentFiles.length
                                         ),
                                     ]);
 
