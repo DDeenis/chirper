@@ -24,7 +24,6 @@ export default function Chirp({
     onDeleteSuccess: (id: number) => void;
     onLikeSuccess: (id: number, isLiked: boolean) => void;
 }) {
-    const page = usePage();
     const [isEditing, setIsEditing] = useState(false);
 
     const { createdAt, updatedAt } = useMemo(

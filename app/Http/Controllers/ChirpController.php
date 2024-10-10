@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\CreateChirpRequest;
 use App\Models\Chirp;
 use App\Models\Media;
+use App\Services\MediaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -37,30 +38,56 @@ class ChirpController extends Controller
         $validated = $request->safe()->except(['images']);
         $created_chirp = Chirp::create($validated, $user);
 
+        $this->attachOrCreateImages($request, $created_chirp);
+
+        return redirect()->back()->with([
+            'created_chirp' => $created_chirp
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(CreateChirpRequest $request, Chirp $chirp): RedirectResponse
+    {
+        Gate::authorize('update', $chirp);
+
+        $validated = $request->safe()->except(['images']);
+        $chirp->update($validated);
+        
+        $this->attachOrCreateImages($request, $chirp);
+
+        return redirect(route('chirps.index'));
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Chirp $chirp): RedirectResponse
+    {
+        Gate::authorize('delete', $chirp);
+
+        $chirp->delete();
+
+        return redirect(route('chirps.index'));
+    }
+
+    private function attachOrCreateImages(CreateChirpRequest $request, Chirp $chirp)
+    {
         $images = $request->file('images');
 
         if($images && is_array($images)) {
             $imagesFolder = storage_path('app/public');
-
-            if(!is_dir($imagesFolder)) mkdir(directory: $imagesFolder, recursive: true);
+            $chirpExistingMediaHashes = array_map(fn ($media) => $media->file_hash, $chirp->media);
 
             $imageUploadData = collect($images)
+                ->filter(fn (UploadedFile $file) => !in_array(MediaService::hashFile($file), $chirpExistingMediaHashes))
                 ->map(function (UploadedFile $file) use ($imagesFolder)  {
                     $name = time().'_'.$file->hashName();
                     $path = $imagesFolder.'/'.$name;
-                    $fileHash = hash_file(
-                        config(key: 'app.uploads.hash_algo'),
-                        $file,
-                    );
+                    $fileHash = MediaService::hashFile($file);
                     
-                    // $image = Image::read($file)->encode(new AutoEncoder(quality: 70));
-                    $image = Image::read($file);
-
-                    if($image->width() > 1920 || $image->height() > 1080) {
-                        $image->scaleDown(1920, 1080);
-                    }
-
-                    $encodedImage = $image->encode(new AutoEncoder(quality: 70));
+                    $encodedImage = MediaService::encodeAndCompressImage($file);
 
                     return [
                         'file' => [
@@ -79,30 +106,14 @@ class ChirpController extends Controller
                 }
             );
 
-            $existingFiles = Media::whereIn(
-                'file_hash', 
-                $imageUploadData->map(
-                    fn ($file) => $file['file']['file_hash'],
-                )
-            )->select(['id', 'file_hash'])->get();
-
-            $existingFilesHashes = $existingFiles->pluck('file_hash')->toArray();
-            $existingFilesIds = $existingFiles->pluck('id')->toArray();
-
-            $filesToAttach = $imageUploadData->filter(
-                fn ($file) => in_array($file['file']['file_hash'], $existingFilesHashes)
-            );
-            $filesToCreate = $imageUploadData->filter(
-                fn ($file) => !in_array($file['file']['file_hash'], $existingFilesHashes)
-            );
+            $separationResult = MediaService::separateUploadedFiles($imageUploadData);
+            $filesToCreate = $separationResult['to_create'];
+            $filesToAttach = $separationResult['to_atach'];
+            $existingFilesIds = $separationResult['existing_ids'];
 
             if(count($filesToCreate) > 0) {
-                foreach($filesToCreate as $file) {
-                    $saveFileFn = $file['save'];
-                    $saveFileFn();
-                }
-
-                $created_chirp
+                $filesToCreate->each(fn (array $file) => $file['save']());
+                $chirp
                     ->media()
                     ->createMany(
                         $filesToCreate->map(fn (array $file) => $file['file'])
@@ -110,39 +121,14 @@ class ChirpController extends Controller
             }
             
             if(count($filesToAttach) > 0) {
-                $created_chirp
+                $chirp
                     ->media()
                     ->attach($existingFilesIds);
             }
+
+            return true;
         }
 
-        return redirect()->back()->with([
-            'created_chirp' => $created_chirp
-        ]);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(CreateChirpRequest $request, Chirp $chirp): RedirectResponse
-    {
-        Gate::authorize('update', $chirp);
-
-        $validated = $request->validated();
-        $chirp->update($validated);
-
-        return redirect(route('chirps.index'));
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Chirp $chirp): RedirectResponse
-    {
-        Gate::authorize('delete', $chirp);
-
-        $chirp->delete();
-
-        return redirect(route('chirps.index'));
+        return false;
     }
 }
