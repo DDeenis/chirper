@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\CreateChirpRequest;
+use App\Http\Requests\StoreChirpRequest;
+use App\Http\Requests\UpdateChirpRequest;
 use App\Models\Chirp;
 use App\Models\Media;
 use App\Services\MediaService;
+use DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -32,7 +34,7 @@ class ChirpController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(CreateChirpRequest $request): RedirectResponse
+    public function store(StoreChirpRequest $request): RedirectResponse
     {
         $user = $request->user();
         $validated = $request->safe()->except(['images']);
@@ -48,7 +50,7 @@ class ChirpController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(CreateChirpRequest $request, Chirp $chirp): RedirectResponse
+    public function update(UpdateChirpRequest $request, Chirp $chirp): RedirectResponse
     {
         Gate::authorize('update', $chirp);
 
@@ -56,6 +58,7 @@ class ChirpController extends Controller
         $chirp->update($validated);
         
         $this->attachOrCreateImages($request, $chirp);
+        $this->deleteRemovedImages($request, $chirp);
 
         return redirect(route('chirps.index'));
     }
@@ -72,7 +75,7 @@ class ChirpController extends Controller
         return redirect(route('chirps.index'));
     }
 
-    private function attachOrCreateImages(CreateChirpRequest $request, Chirp $chirp)
+    private function attachOrCreateImages(StoreChirpRequest|UpdateChirpRequest $request, Chirp $chirp)
     {
         $images = $request->file('images');
 
@@ -112,12 +115,12 @@ class ChirpController extends Controller
             $existingFilesIds = $separationResult['existing_ids'];
 
             if(count($filesToCreate) > 0) {
-                $filesToCreate->each(fn (array $file) => $file['save']());
                 $chirp
                     ->media()
                     ->createMany(
                         $filesToCreate->map(fn (array $file) => $file['file'])
                     );
+                $filesToCreate->each(fn (array $file) => $file['save']());
             }
             
             if(count($filesToAttach) > 0) {
@@ -126,6 +129,18 @@ class ChirpController extends Controller
                     ->attach($existingFilesIds);
             }
 
+            return true;
+        }
+
+        return false;
+    }
+
+    private function deleteRemovedImages(UpdateChirpRequest $request, Chirp $chirp)
+    {
+        $removedImagesIds = $request->input('deleted_images_ids');
+        
+        if(is_array($removedImagesIds)) {
+            $chirp->media()->detach($removedImagesIds);
             return true;
         }
 

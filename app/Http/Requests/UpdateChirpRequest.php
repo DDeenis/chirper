@@ -6,7 +6,7 @@ use App\Rules\MaxFiles;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\File;
 
-class CreateChirpRequest extends FormRequest
+class UpdateChirpRequest extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -17,8 +17,10 @@ class CreateChirpRequest extends FormRequest
     {
         return [
             'message' => ['required', 'string', 'max:255'],
-            'images' => [new MaxFiles(max: 4)],
+            'images' => ['array', 'distinct', new MaxFiles(max: 4)],
             'images.*' => [File::types(['jpg', 'jpeg', 'png', 'webp'])->max(5 * 1024)],
+            'deleted_images_ids' => ['array', 'max:4'],
+            'deleted_images_ids.*' => ['number', 'distinct'],
         ];
     }
 }

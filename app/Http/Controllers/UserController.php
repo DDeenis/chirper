@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\CreateChirpRequest;
+use App\Http\Requests\StoreChirpRequest;
 use App\Models\Chirp;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -37,7 +37,7 @@ class UserController extends Controller
         //
     }
 
-    public function create_chirp(CreateChirpRequest $request): RedirectResponse
+    public function create_chirp(StoreChirpRequest $request): RedirectResponse
     {
         $user = $request->user();
         $validated = $request->validated();
