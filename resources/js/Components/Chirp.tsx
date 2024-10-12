@@ -8,6 +8,7 @@ import PrimaryButton from "@/Components/PrimaryButton";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 import { HeartIcon } from "./Icons/HeartIcon";
 import clsx from "clsx";
+import { EditChirpForm } from "./EditChirpForm";
 
 dayjs.extend(relativeTime);
 
@@ -52,24 +53,6 @@ export default function Chirp({
             preserveScroll: true,
         });
     };
-
-    // const handleLike = async () => {
-    //     const success: boolean = await fetch(route("like.store"), {
-    //         method: "POST",
-    //         body: JSON.stringify({
-    //             _token: page.props.,
-    //             chirp_id: chirp.id,
-    //         }),
-    //     })
-    //         .then((r) => r.json())
-    //         .then((r) => r.success);
-    //     router.post(route('like', chirp.id), {}, {
-    //         preserveScroll: true,
-    //         preserveState: true
-    //     })
-
-    //     success && onLikeSuccess(chirp.id, !chirp.is_liked);
-    // };
 
     return (
         <div className="p-6 flex flex-col space-y-6">
@@ -147,35 +130,14 @@ export default function Chirp({
                         )}
                     </div>
                     {isEditing ? (
-                        <form onSubmit={submit}>
-                            <textarea
-                                value={editForm.data.message}
-                                onChange={(e) =>
-                                    editForm.setData("message", e.target.value)
-                                }
-                                className="mt-4 w-full text-gray-900 border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm"
-                            ></textarea>
-                            <InputError
-                                message={editForm.errors.message}
-                                className="mt-2"
-                            />
-                            <div className="space-x-2">
-                                <PrimaryButton className="mt-4">
-                                    Save
-                                </PrimaryButton>
-
-                                <button
-                                    className="mt-4"
-                                    onClick={() => {
-                                        finishEdit();
-                                        editForm.reset();
-                                        editForm.clearErrors();
-                                    }}
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
+                        <EditChirpForm
+                            chirp={chirp}
+                            onCancel={finishEdit}
+                            onChirpEdited={(newChirp) => {
+                                finishEdit();
+                                onEditSuccess(newChirp);
+                            }}
+                        />
                     ) : (
                         <div className="mt-4">
                             <p className="text-lg text-gray-900 whitespace-pre-line text-wrap break-all">

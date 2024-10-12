@@ -14,7 +14,7 @@ class StoreLikeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'chirp_id' => ['required', 'numeric']
+            'chirp_id' => ['required', 'integer']
         ];
     }
 }

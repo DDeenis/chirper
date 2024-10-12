@@ -1,136 +1,115 @@
-import { Chirp, PageProps } from "@/types";
+import { Chirp } from "@/types";
 import { useForm } from "@inertiajs/react";
 import InputError from "./InputError";
 import PrimaryButton from "./PrimaryButton";
-import PaperclipIcon from "./Icons/PaperclipIcon";
-import { useMemo, useState } from "react";
-import XIcon from "./Icons/XIcon";
-import MaximizeIcon from "./Icons/MaximizeIcon";
+import ChirpMessageInput from "./ChirpForm/ChirpMessageInput";
+import ChirpImagesPreview, {
+    ChirpPreviewImage,
+} from "./ChirpForm/ChirpImagesPreview";
+import ChirpToolbar from "./ChirpForm/ChirpToolbar";
+import type { FormValues } from "./ChirpForm/utils";
+import useChirpFormUtils from "@/Hooks/useChirpFormUtils";
+import { useMemo } from "react";
 
-interface FormValues {
-    message: string;
-    images?: File[];
+interface EditFormValues extends FormValues {
+    deleted_images_ids?: number[];
 }
-
-const getFileKey = (file: File) => `${file.name}_${file.size}`;
-
-const maxImagesCount = 4;
-const maxMessageLength = 250;
 
 export function EditChirpForm({
     chirp,
+    onCancel,
     onChirpEdited,
 }: {
     chirp: Chirp;
+    onCancel: () => void;
     onChirpEdited: (newChirp: Chirp) => void;
 }) {
-    const { data, setData, patch, reset, errors, clearErrors, processing } =
-        useForm<FormValues>({
+    const { data, setData, post, reset, errors, clearErrors, processing } =
+        useForm<EditFormValues>({
             message: chirp.message,
         });
 
-    const [isEditing, setIsEditing] = useState(false);
+    const {
+        fileKeys,
+        onUploadImage,
+        onRemoveImage,
+        onClearAll,
+        progressingPercentages,
+        calculateProgressingPercentages,
+    } = useChirpFormUtils({
+        images: data.images,
+        setData,
+        existingFilesCount:
+            chirp.media.length - (data.deleted_images_ids?.length ?? 0),
+    });
 
-    const startEdit = () => setIsEditing(true);
-    const finishEdit = () => setIsEditing(false);
-
-    const previewImages = useMemo(() => {
-        return data.images
-            ? data.images.map((file) => URL.createObjectURL(file))
-            : [];
-    }, [data.images]);
-    const fileKeys = useMemo(
-        () => data.images?.map(getFileKey) ?? [],
-        [data.images]
+    const existingImagesPreview = useMemo(
+        () =>
+            chirp.media
+                .filter((img) => !data.deleted_images_ids?.includes(img.id))
+                .map((img) => (
+                    <ChirpPreviewImage
+                        key={img.url}
+                        src={img.url}
+                        onRemove={() => {
+                            setData(
+                                "deleted_images_ids",
+                                data.deleted_images_ids
+                                    ? [...data.deleted_images_ids, img.id]
+                                    : [img.id]
+                            );
+                        }}
+                    />
+                )),
+        [chirp.media, data.deleted_images_ids]
     );
+
+    function handleClearAll() {
+        onClearAll();
+        setData(
+            "deleted_images_ids",
+            chirp.media.map((img) => img.id)
+        );
+    }
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        patch(route("chirps.update", chirp.id), {
-            onSuccess: () => {
-                finishEdit();
-                onChirpEdited({ ...chirp, ...data });
+
+        // php accept files only through a post request
+        post(route("chirps.update", chirp.id), {
+            only: ["updated_chirp"],
+            onSuccess: (data) => {
+                if ("updated_chirp" in data.props) {
+                    onChirpEdited(data.props.updated_chirp as Chirp);
+                }
             },
+            onProgress: calculateProgressingPercentages,
             preserveState: true,
             preserveScroll: true,
         });
     };
 
+    const isPreviewShown =
+        (!!data.images && data.images.length > 0) ||
+        existingImagesPreview.length > 0;
+
     return (
         <form onSubmit={submit}>
             <div>
-                <textarea
+                <ChirpMessageInput
                     value={data.message}
-                    placeholder="Write something else..."
-                    className="block w-full border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm"
                     onChange={(e) => setData("message", e.target.value)}
-                ></textarea>
-                <p className="text-right">
-                    <small
-                        className={
-                            data.message.length > maxMessageLength
-                                ? "text-red-400"
-                                : "text-gray-400"
-                        }
-                    >
-                        {data.message.length}/{maxMessageLength}
-                    </small>
-                </p>
-                {previewImages.length > 0 && (
-                    <div className="mt-2">
-                        <div className="flex flex-wrap justify-center lg:justify-start gap-2">
-                            {previewImages.map((img, i) => (
-                                <div
-                                    className="w-28 h-28 rounded-lg overflow-hidden relative group"
-                                    key={fileKeys[i]}
-                                >
-                                    <img
-                                        width={112}
-                                        height={112}
-                                        src={img}
-                                        alt="Preview"
-                                        className="object-cover w-full h-full"
-                                        style={{
-                                            overflowClipMargin: "unset",
-                                        }}
-                                    />
-                                    <div className="bg-black/40 absolute inset-0 hidden group-hover:flex justify-center items-center gap-4">
-                                        <button
-                                            className="p-1 bg-white/75 hover:bg-white/80 active:bg-white/90 rounded-lg transition-colors"
-                                            type="button"
-                                        >
-                                            <MaximizeIcon className="w-6 h-6 text-black" />
-                                        </button>
-                                        <button
-                                            className="p-1 bg-white/75 hover:bg-white/80 active:bg-white/90 rounded-lg transition-colors"
-                                            type="button"
-                                            onClick={() => {
-                                                const imagesCopy = [
-                                                    ...data.images!,
-                                                ];
-                                                imagesCopy.splice(i, 1);
-                                                setData("images", imagesCopy);
-                                            }}
-                                        >
-                                            <XIcon className="w-6 h-6 text-black" />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <small className="text-gray-400">
-                                {previewImages.length}/{maxImagesCount} images
-                            </small>
-                            <button
-                                type="button"
-                                className="text-gray-400 underline font-semibold"
-                                onClick={() => setData("images", undefined)}
-                            >
-                                <small>Clear all</small>
-                            </button>
-                        </div>
-                    </div>
+                />
+                {isPreviewShown && (
+                    <ChirpImagesPreview
+                        images={data.images ?? []}
+                        fileKeys={fileKeys}
+                        onRemoveImage={onRemoveImage}
+                        onClearAll={handleClearAll}
+                        imageListChildren={existingImagesPreview}
+                        processing={processing}
+                        processingPercentages={progressingPercentages}
+                    />
                 )}
             </div>
             <InputError
@@ -138,15 +117,12 @@ export function EditChirpForm({
                 className="mt-2"
             />
             <div className="mt-4 flex justify-between items-center">
-                <div className="space-x-2">
-                    <PrimaryButton className="mt-4" disabled={processing}>
-                        Save
-                    </PrimaryButton>
-
+                <div className="space-x-2 mt-4">
+                    <PrimaryButton disabled={processing}>Save</PrimaryButton>
                     <button
-                        className="mt-4"
+                        type="button"
                         onClick={() => {
-                            finishEdit();
+                            onCancel();
                             reset();
                             clearErrors();
                         }}
@@ -155,42 +131,7 @@ export function EditChirpForm({
                         Cancel
                     </button>
                 </div>
-                <div className="flex items-center space-x-2">
-                    <button className="relative w-8 h-8 cursor-pointer">
-                        <input
-                            type="file"
-                            accept="image/png, image/jpeg, image/webp"
-                            multiple
-                            onChange={(e) => {
-                                const { files } = e.target;
-                                if (files) {
-                                    const currentFiles = data.images ?? [];
-
-                                    if (currentFiles.length === maxImagesCount)
-                                        return;
-
-                                    const filesFiltered = [...files].filter(
-                                        (file) =>
-                                            !fileKeys.includes(getFileKey(file))
-                                    );
-
-                                    setData("images", [
-                                        ...currentFiles,
-                                        ...filesFiltered.slice(
-                                            0,
-                                            maxImagesCount - currentFiles.length
-                                        ),
-                                    ]);
-
-                                    e.target.value = "";
-                                    e.target.files = null;
-                                }
-                            }}
-                            className="absolute inset-0 opacity-0 z-10 cursor-pointer"
-                        />
-                        <PaperclipIcon className="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 cursor-pointer" />
-                    </button>
-                </div>
+                <ChirpToolbar onUploadImage={onUploadImage} />
             </div>
         </form>
     );

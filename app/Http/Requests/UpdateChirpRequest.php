@@ -20,7 +20,7 @@ class UpdateChirpRequest extends FormRequest
             'images' => ['array', 'distinct', new MaxFiles(max: 4)],
             'images.*' => [File::types(['jpg', 'jpeg', 'png', 'webp'])->max(5 * 1024)],
             'deleted_images_ids' => ['array', 'max:4'],
-            'deleted_images_ids.*' => ['number', 'distinct'],
+            'deleted_images_ids.*' => ['integer', 'distinct'],
         ];
     }
 }

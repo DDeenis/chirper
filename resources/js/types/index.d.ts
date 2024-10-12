@@ -23,7 +23,7 @@ export interface Chirp {
         id: number;
         name: string;
     };
-    media: { mime: string; url: string }[];
+    media: { id: number; mime: string; url: string }[];
     likes_count: number;
     is_liked: boolean;
 }

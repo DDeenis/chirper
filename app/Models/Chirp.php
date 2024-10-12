@@ -55,12 +55,15 @@ class Chirp extends Model
 
     public function getMediaAttribute()
     {
-        return array_map(function (array $file) {
-            // dd($file);
-            return [
-                'mime' => $file['mime_type'],
-                'url' => Storage::url($file['path']),
-            ];
-        }, $this->media()->get()->toArray());
+        return $this->media()
+            ->select(['media.id', 'mime_type', 'path'])
+            ->get()
+            ->map(function ($file) {
+                return [
+                    'id' => $file->id,
+                    'mime' => $file->mime_type,
+                    'url' => Storage::url($file->path),
+                ];
+            });
     }
 }

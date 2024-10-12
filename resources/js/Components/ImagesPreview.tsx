@@ -55,9 +55,13 @@ function ImagesPreviewComponent(props: ComponentProps) {
             }
         }
 
-        document.addEventListener("keydown", handleKeydown);
+        const abortController = new AbortController();
 
-        return () => document.removeEventListener("keydown", handleKeydown);
+        document.addEventListener("keydown", handleKeydown, {
+            signal: abortController.signal,
+        });
+
+        return () => abortController.abort();
     }, []);
 
     return (

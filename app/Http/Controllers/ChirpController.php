@@ -27,7 +27,8 @@ class ChirpController extends Controller
     {
         return Inertia::render('Chirp/Index', [
             'chirps' => Chirp::latest()->cursorPaginate(20),
-            'created_chirp' => fn() => $request->session()->get('created_chirp')
+            'created_chirp' => fn() => $request->session()->get('created_chirp'),
+            'updated_chirp' => fn() => $request->session()->get('updated_chirp'),
         ]);
     }
 
@@ -50,17 +51,20 @@ class ChirpController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateChirpRequest $request, Chirp $chirp): RedirectResponse
+    public function _update(UpdateChirpRequest $request, Chirp $chirp): RedirectResponse
     {
         Gate::authorize('update', $chirp);
 
-        $validated = $request->safe()->except(['images']);
+        $validated = $request->safe()->only(['message']);
+
         $chirp->update($validated);
         
-        $this->attachOrCreateImages($request, $chirp);
         $this->deleteRemovedImages($request, $chirp);
+        $this->attachOrCreateImages($request, $chirp);
 
-        return redirect(route('chirps.index'));
+        $chirp->refresh();
+
+        return redirect()->back()->with('updated_chirp', $chirp);
     }
 
     /**
@@ -81,10 +85,8 @@ class ChirpController extends Controller
 
         if($images && is_array($images)) {
             $imagesFolder = storage_path('app/public');
-            $chirpExistingMediaHashes = array_map(fn ($media) => $media->file_hash, $chirp->media);
 
             $imageUploadData = collect($images)
-                ->filter(fn (UploadedFile $file) => !in_array(MediaService::hashFile($file), $chirpExistingMediaHashes))
                 ->map(function (UploadedFile $file) use ($imagesFolder)  {
                     $name = time().'_'.$file->hashName();
                     $path = $imagesFolder.'/'.$name;
