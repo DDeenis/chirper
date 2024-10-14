@@ -3,7 +3,7 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, router } from "@inertiajs/react";
 import type { Chirp, CursorPagedData, User } from "@/types";
 import ChirpsList from "@/Components/ChirpsList";
-import { CreateChirpForm } from "@/Components/CreateChirpForm";
+import { CreateChirpForm } from "@/Components/ChirpForm/CreateChirpForm";
 import { useChirpFeed } from "@/Hooks/useChirpFeed";
 
 interface Props {

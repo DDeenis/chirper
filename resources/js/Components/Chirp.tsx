@@ -8,7 +8,7 @@ import PrimaryButton from "@/Components/PrimaryButton";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 import { HeartIcon } from "./Icons/HeartIcon";
 import clsx from "clsx";
-import { EditChirpForm } from "./EditChirpForm";
+import { EditChirpForm } from "./ChirpForm/EditChirpForm";
 
 dayjs.extend(relativeTime);
 

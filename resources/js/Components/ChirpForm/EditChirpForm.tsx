@@ -1,15 +1,15 @@
 import { Chirp } from "@/types";
 import { useForm } from "@inertiajs/react";
-import InputError from "./InputError";
-import PrimaryButton from "./PrimaryButton";
-import ChirpMessageInput from "./ChirpForm/ChirpMessageInput";
-import ChirpImagesPreview, {
-    ChirpPreviewImage,
-} from "./ChirpForm/ChirpImagesPreview";
-import ChirpToolbar from "./ChirpForm/ChirpToolbar";
-import type { FormValues } from "./ChirpForm/utils";
+import InputError from "../InputError";
+import PrimaryButton from "../PrimaryButton";
+import ChirpMessageInput from "./ChirpMessageInput";
+import ChirpImagesPreview, { ChirpPreviewImage } from "./ChirpImagesPreview";
+import ChirpToolbar from "./ChirpToolbar";
+import type { FormValues } from "./utils";
 import useChirpFormUtils from "@/Hooks/useChirpFormUtils";
 import { useMemo } from "react";
+import useImagePreview from "@/Hooks/useImagePreview";
+import ImagesPreview from "../ImagesPreview";
 
 interface EditFormValues extends FormValues {
     deleted_images_ids?: number[];
@@ -43,11 +43,23 @@ export function EditChirpForm({
             chirp.media.length - (data.deleted_images_ids?.length ?? 0),
     });
 
+    const imagePreview = useImagePreview();
+
+    const previewUrls = useMemo<string[]>(
+        () => [
+            ...chirp.media.map((c) => c.url),
+            ...(data.images
+                ? data.images.map((file) => URL.createObjectURL(file))
+                : []),
+        ],
+        [data.images]
+    );
+
     const existingImagesPreview = useMemo(
         () =>
             chirp.media
                 .filter((img) => !data.deleted_images_ids?.includes(img.id))
-                .map((img) => (
+                .map((img, i) => (
                     <ChirpPreviewImage
                         key={img.url}
                         src={img.url}
@@ -59,6 +71,7 @@ export function EditChirpForm({
                                     : [img.id]
                             );
                         }}
+                        onMaximize={() => imagePreview.openPreview(i)}
                     />
                 )),
         [chirp.media, data.deleted_images_ids]
@@ -109,6 +122,11 @@ export function EditChirpForm({
                         imageListChildren={existingImagesPreview}
                         processing={processing}
                         processingPercentages={progressingPercentages}
+                        onMaximizeImage={(index) =>
+                            imagePreview.openPreview(
+                                index + (chirp.media.length - 1)
+                            )
+                        }
                     />
                 )}
             </div>
@@ -133,6 +151,14 @@ export function EditChirpForm({
                 </div>
                 <ChirpToolbar onUploadImage={onUploadImage} />
             </div>
+            <ImagesPreview
+                modal={{
+                    show: imagePreview.isOpen,
+                    onClose: imagePreview.closePreview,
+                }}
+                startFromIndex={imagePreview.startPreviewFrom}
+                urls={previewUrls}
+            />
         </form>
     );
 }

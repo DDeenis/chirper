@@ -1,11 +1,11 @@
 import { PageProps } from "@/types";
 import { useForm } from "@inertiajs/react";
-import InputError from "./InputError";
-import PrimaryButton from "./PrimaryButton";
-import ChirpImagesPreview from "./ChirpForm/ChirpImagesPreview";
-import type { FormValues } from "./ChirpForm/utils";
-import ChirpToolbar from "./ChirpForm/ChirpToolbar";
-import ChirpMessageInput from "./ChirpForm/ChirpMessageInput";
+import InputError from "../InputError";
+import PrimaryButton from "../PrimaryButton";
+import ChirpImagesPreview from "../ChirpForm/ChirpImagesPreview";
+import type { FormValues } from "../ChirpForm/utils";
+import ChirpToolbar from "../ChirpForm/ChirpToolbar";
+import ChirpMessageInput from "../ChirpForm/ChirpMessageInput";
 import useChirpFormUtils from "@/Hooks/useChirpFormUtils";
 
 export function CreateChirpForm({

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Modal from "./Modal";
+import { Dialog, DialogPanel } from "@headlessui/react";
 
 interface Props {
     urls: string[];
@@ -18,25 +19,55 @@ interface ComponentProps extends Omit<Props, "startFromIndex"> {
     onNext: () => void;
 }
 
+function clamp(value: number, min: number, max: number) {
+    return Math.max(min, Math.min(value, max));
+}
+
 export default function ImagesPreview(props: Props) {
     const [currentIndex, setCurrentIndex] = useState(() =>
-        Math.min(
-            props.startFromIndex !== undefined && props.startFromIndex > 0
-                ? props.startFromIndex
-                : 0,
-            props.urls.length
-        )
+        props.startFromIndex !== undefined
+            ? clamp(props.startFromIndex, 0, props.urls.length - 1)
+            : 0
     );
 
+    const hasNext = (index: number) => index < props.urls.length - 1;
+    const hasPrev = (index: number) => index > 0;
+
+    function onNext() {
+        setCurrentIndex((index) => (hasNext(index) ? index + 1 : index));
+    }
+    function onPrev() {
+        if (!hasPrev) return;
+        setCurrentIndex((index) => (hasPrev(index) ? index - 1 : index));
+    }
+
+    useEffect(() => {
+        props.startFromIndex !== undefined &&
+            setCurrentIndex(
+                clamp(props.startFromIndex, 0, props.urls.length - 1)
+            );
+    }, [props.startFromIndex]);
+
     return (
-        <Modal
-            show={props.modal.show}
-            onClose={props.modal.onClose}
-            closeable
-            maxWidth="full"
+        <Dialog
+            open={props.modal.show}
+            onClose={() => props.modal.onClose()}
+            className="relative z-50"
         >
-            <ImagesPreviewComponent urls={props.urls} modal={props.modal} />
-        </Modal>
+            <div className="fixed inset-0 flex w-screen items-center justify-center p-4 bg-gray-500/75">
+                <DialogPanel className="max-w-lg space-y-4 border overflow-hidden border-none">
+                    <ImagesPreviewComponent
+                        urls={props.urls}
+                        modal={props.modal}
+                        currentIndex={currentIndex}
+                        hasNext={hasNext(currentIndex)}
+                        hasPrev={hasPrev(currentIndex)}
+                        onNext={onNext}
+                        onPrev={onPrev}
+                    />
+                </DialogPanel>
+            </div>
+        </Dialog>
     );
 }
 
@@ -44,12 +75,14 @@ const leftCodes = ["ArrowLeft", "KeyA", "Numpad4"];
 const rightCodes = ["ArrowRight", "KeyD", "Numpad6"];
 
 function ImagesPreviewComponent(props: ComponentProps) {
+    const currentImage = props.urls[props.currentIndex]!;
+
     useEffect(() => {
         function handleKeydown(e: KeyboardEvent) {
             if (leftCodes.includes(e.code)) {
-                props.hasPrev && props.onPrev();
+                props.onPrev();
             } else if (rightCodes.includes(e.code)) {
-                props.hasNext && props.onNext();
+                props.onNext();
             } else if (e.code === "Escape") {
                 props.modal.onClose();
             }
@@ -64,21 +97,5 @@ function ImagesPreviewComponent(props: ComponentProps) {
         return () => abortController.abort();
     }, []);
 
-    return (
-        <div
-            className="w-full h-full flex flex-col items-center"
-            onClick={() => props.modal.onClose()}
-        >
-            <div
-                className="w-full max-h-[70%]"
-                onClick={(e) => e.stopPropagation()}
-            >
-                {props.urls.map((url) => (
-                    <figure className="max-w-[70%]" key={url}>
-                        <img src={url} className="h-full w-full" />
-                    </figure>
-                ))}
-            </div>
-        </div>
-    );
+    return <img src={currentImage} className="max-h-[70vh] object-contain" />;
 }

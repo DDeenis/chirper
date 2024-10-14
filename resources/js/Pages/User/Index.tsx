@@ -1,5 +1,5 @@
 import ChirpsList from "@/Components/ChirpsList";
-import { CreateChirpForm } from "@/Components/CreateChirpForm";
+import { CreateChirpForm } from "@/Components/ChirpForm/CreateChirpForm";
 import { useChirpFeed } from "@/Hooks/useChirpFeed";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import type { Chirp, CursorPagedData, User, UserPreview } from "@/types";

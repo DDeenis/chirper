@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { getFileKey, maxImagesCount } from "./utils";
+import { maxImagesCount } from "./utils";
 import MaximizeIcon from "../Icons/MaximizeIcon";
 import XIcon from "../Icons/XIcon";
 import CircleCheckIcon from "../Icons/CircleCheckIcon";
@@ -9,7 +9,7 @@ export default function ChirpImagesPreview({
     images,
     fileKeys,
     onRemoveImage,
-    // onMaximizeImage,
+    onMaximizeImage,
     onClearAll,
     imageListChildren,
     processing,
@@ -18,7 +18,7 @@ export default function ChirpImagesPreview({
     images: File[];
     fileKeys: string[];
     onRemoveImage: (index: number) => void;
-    // onMaximizeImage: (index: number) => void;
+    onMaximizeImage: (index: number) => void;
     onClearAll: () => void;
     imageListChildren?: React.ReactElement[];
     processing?: boolean;
@@ -42,7 +42,7 @@ export default function ChirpImagesPreview({
                                 : undefined
                         }
                         onRemove={() => onRemoveImage(i)}
-                        // onMaximize={() => onMaximizeImage(i)}
+                        onMaximize={() => onMaximizeImage(i)}
                     />
                 ))}
             </div>
@@ -68,12 +68,12 @@ export function ChirpPreviewImage({
     src,
     loadedPercentage,
     onRemove,
-}: // onMaximize,
-{
+    onMaximize,
+}: {
     src: string;
     loadedPercentage?: number;
     onRemove: () => void;
-    // onMaximize: () => void;
+    onMaximize: () => void;
 }) {
     const isLoading = loadedPercentage !== undefined;
 
@@ -94,7 +94,7 @@ export function ChirpPreviewImage({
                     <button
                         className="p-1 bg-white/75 hover:bg-white/80 active:bg-white/90 rounded-lg transition-colors"
                         type="button"
-                        // onClick={onMaximize}
+                        onClick={onMaximize}
                     >
                         <MaximizeIcon className="w-6 h-6 text-black" />
                     </button>
